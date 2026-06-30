@@ -23,6 +23,7 @@ Catalog of the maintained knowledge base. See `../CLAUDE.md` for the schema.
 - [`../sim/measure_p.py`](../sim/measure_p.py) — measures real LM next-word
   accuracy `p`; computes raw vs gross vs net savings.
 - [`../sim/figure_measured.py`](../sim/figure_measured.py) — fig4, fig5.
+- [`../sim/gating.py`](../sim/gating.py) — confidence-gating analysis; fig6, fig7.
 - [`results.md`](results.md) — measured findings so far (living).
 - `../results/` — fig1-3 (model), fig4 (savings vs c), fig5 (models on
   breakeven), measured_*.json, summary.txt.

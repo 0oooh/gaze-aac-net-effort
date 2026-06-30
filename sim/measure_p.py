@@ -144,6 +144,11 @@ def main():
     tag = args.tag or name.replace("/", "_")
     with open(os.path.join(RESULTS_DIR, f"measured_{tag}.json"), "w") as f:
         json.dump(res, f, indent=2)
+    # Per-prediction records for downstream confidence-gating analysis.
+    with open(os.path.join(RESULTS_DIR, f"records_{tag}.json"), "w") as f:
+        json.dump({"model": name,
+                   "records": [[int(c), int(m), round(conf, 5)]
+                               for (c, m, conf) in records]}, f)
 
     print(f"model={name}  n={res['n']}  measured top-1 p={res['p_top1']:.3f}"
           f"  mean_word_len={res['mean_word_len']:.2f}")

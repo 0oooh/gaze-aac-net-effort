@@ -46,6 +46,39 @@ model (the SpeakFaster regime) as the rightmost point.
    in real AAC use is the empirical question this frames -- and the motivation
    for a state-gated (predict-only-when-confident) policy.
 
+## Confidence-gating (offer only when the model is confident)
+
+Policy: offer a prediction only when its top-1 probability >= a gate `tau`;
+otherwise stay silent (user types manually). `tau` is chosen on a train split
+and evaluated on a held-out test split, so the numbers are not `tau` fit to the
+test set.
+
+- **Confidence is strongly informative** (fig7): accuracy rises monotonically
+  with confidence, from ~5% in the lowest bin to ~68% in the highest; the model
+  is roughly calibrated. So the gating signal is real.
+- **Gating drastically cuts the loss of always-predict** (fig6): at c=2 it moves
+  net effort from about -86% toward 0; the worse the correction cost, the bigger
+  the rescue (c=6: from -217% toward 0).
+- **But with a model this weak, the optimal gate suppresses prediction**
+  (net ~= 0, offer ~= 0%). GPT-2's most-confident predictions top out at ~68%
+  accuracy, below the per-offer breakeven (~78% at c=2 for the short, common
+  words that score high confidence -- and high-confidence words are indeed
+  shorter, 4.1 vs 5.1 chars, which shrinks their savings).
+
+| c | always-predict (test) | best gated (test) | offer rate |
+|---|----------------------|-------------------|-----------|
+| 2 | -86% | 0% | 0% |
+| 4 | -151% | 0% | 0% |
+| 6 | -217% | 0% | 0% |
+
+**Honest takeaway.** At current small-LM strength, the right policy in the gaze
+regime is to predict very little; confidence-gating is the mechanism that safely
+realizes that (it caps the loss at ~0 instead of -86%+) and would yield positive
+savings once a model's confident-prediction accuracy clears the breakeven bar.
+This pushes against the field's always-suggest default. It also sharpens the
+next questions: does a frontier conversational model clear the bar, and is the
+real gaze correction cost `c` actually in the 2-6 band.
+
 ## Honesty / limitations
 
 - GPT-2 small is a weak predictor; its low `p` is a lower bound. A frontier
@@ -59,7 +92,13 @@ model (the SpeakFaster regime) as the rightmost point.
 - `c` is still swept, not measured. Measuring real gaze correction cost is the
   next empirical leg (it is what turns "if c is 2-6" into "c is measured to be
   X").
+- The gating result uses the harsh *commit* regime (a wrong offer is acted on
+  and must be corrected). A pure *suggestion* UI, where a wrong offer costs only
+  a glance, would let gating net positive more easily; reporting both regimes is
+  a planned refinement.
 
 ## Figures
 - `../results/fig4_savings_vs_c.png` -- raw vs gross vs net at measured p.
 - `../results/fig5_models_on_breakeven.png` -- models on the (p, c) breakeven.
+- `../results/fig6_gating_curve.png` -- net savings vs confidence gate `tau`.
+- `../results/fig7_calibration.png` -- accuracy vs model confidence.
