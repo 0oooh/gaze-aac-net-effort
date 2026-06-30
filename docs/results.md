@@ -28,8 +28,11 @@ cost of correcting wrong predictions.
 | model | measured top-1 p | n predictions |
 |-------|------------------|---------------|
 | GPT-2 small (124M) | 0.23 | 800 |
+| GPT-2 medium (355M) | 0.27 | 700 |
 
-(More model sizes are being added to show the accuracy trajectory.)
+Bigger model -> higher `p` (0.23 -> 0.27), but both sit far left of the
+~0.7-0.85 bar. The trajectory motivates measuring a frontier conversational
+model (the SpeakFaster regime) as the rightmost point.
 
 ## Finding so far
 
