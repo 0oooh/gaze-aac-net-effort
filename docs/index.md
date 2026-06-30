@@ -11,8 +11,8 @@ Catalog of the maintained knowledge base. See `../CLAUDE.md` for the schema.
 
 ## Wiki pages
 - [`design.md`](design.md) — net-effort breakeven model; frozen v0.
-- `params.md` — (planned) grounded ranges for the model parameters
-  (`M, alpha, v, p, c, rho`) pulled from `sources.md`.
+- [`params.md`](params.md) — grounded ranges for the model parameters
+  (`M, alpha, v, p, c, rho`); sweep axes are `p, c, a`.
 - `notes/` — (planned) per-paper notes; anchors: SpeakFaster, Trnka & McCoy
   2008, Mott et al. 2017 (cascading dwell).
 
@@ -22,5 +22,5 @@ Catalog of the maintained knowledge base. See `../CLAUDE.md` for the schema.
 ## Open threads
 - Decide the "prediction opportunity" unit (per word / per pause / per
   sentence) before building the simulator. See `design.md` section 2.
-- Ground `c` and `v` to measured gaze numbers (`params.md`).
+- Tighten `v` and `rho` (estimated) via sensitivity sweeps in the simulator.
 - Pre-register the interesting-vs-null interpretation before running sweeps.
