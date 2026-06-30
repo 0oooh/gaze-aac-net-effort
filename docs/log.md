@@ -10,3 +10,4 @@ Format: `YYYY-MM-DD [tag] message`. Tags: setup, decision, ingest, lint, build.
 2026-06-30 [ingest] Compiled verified reading list into sources.md from web-verified searches (AAC+LLM, gaze-as-state, eye-typing, datasets clusters).
 2026-06-30 [setup] Adopted Karpathy LLM-Wiki pattern: CLAUDE.md schema + docs/index.md + docs/log.md + docs/sources.md.
 2026-06-30 [ingest] params.md: grounded ranges with confidence tags. Sweep axes p,c,a; constants M~5,alpha~1,v~1-2,rho~1-3 (v,rho weak -> sensitivity). Default word regime (M~5). Decision: first simulator uses word regime.
+2026-06-30 [ingest] venues.md: field home is ACM (CHI/ASSETS/ETRA), not IEEE. Realistic tier: CHI LBW / ASSETS poster / ETRA short / arXiv / SLPAT. Lab->venue alignment recorded.

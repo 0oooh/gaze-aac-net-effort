@@ -8,6 +8,8 @@ Catalog of the maintained knowledge base. See `../CLAUDE.md` for the schema.
 ## Raw sources (immutable)
 - [`sources.md`](sources.md) — verified reading list, grouped by cluster
   (AAC + LLM, gaze-as-state, eye-typing input, datasets).
+- [`venues.md`](venues.md) — target publication venues (ACM CHI/ASSETS/ETRA);
+  lab -> venue alignment for cold-email framing.
 
 ## Wiki pages
 - [`design.md`](design.md) — net-effort breakeven model; frozen v0.
