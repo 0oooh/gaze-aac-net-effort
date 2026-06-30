@@ -1,0 +1,23 @@
+# Private strategy docs — never publish
+AAC_연구시작_문서.md
+AAC_6주_빌드플랜.md
+GazeAAC_계획보고서.md
+*_전략*.md
+*_계획*.md
+
+# OS / editor junk
+.DS_Store
+
+# Node
+node_modules/
+npm-debug.log*
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Data / outputs (add specifics later)
+data/raw/
+results/scratch/
