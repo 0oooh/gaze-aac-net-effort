@@ -18,6 +18,12 @@ Catalog of the maintained knowledge base. See `../CLAUDE.md` for the schema.
 - `notes/` — (planned) per-paper notes; anchors: SpeakFaster, Trnka & McCoy
   2008, Mott et al. 2017 (cascading dwell).
 
+## Code and results
+- [`../sim/net_effort.py`](../sim/net_effort.py) — closed-form simulator;
+  renders the breakeven figures.
+- `../results/` — fig1 heatmap (always-predict net effort over p x c),
+  fig2 breakeven p* vs c, fig3 sensitivity to v and rho, summary.txt.
+
 ## Audit trail
 - [`log.md`](log.md) — append-only chronological log of decisions and passes.
 

@@ -1,0 +1,14 @@
+Net-effort breakeven -- key numbers (word regime)
+params: M=5.0 alpha=1.0 v=1.5 rho=2.0
+
+p = 0.50  ->  always-predict loses for c > 0.50
+p = 0.60  ->  always-predict loses for c > 1.12
+p = 0.70  ->  always-predict loses for c > 2.17
+p = 0.80  ->  always-predict loses for c > 4.25
+
+At realistic p=0.60, c* = 1.12; realistic gaze c band is 2-6,
+so across most of the realistic c band, always-predict is a net loss
+=> a state-gated policy (predict only when payoff>0) dominates.
+
+Caveat: v and rho are estimated; see fig 3 sensitivity. The finding
+shape (c* exists and rises with p) is robust; the exact c* is not.
