@@ -23,7 +23,7 @@ coincide with realistic gaze / motor-impaired input conditions?
 
 ## Status
 
-🚧 Early. Design and scaffold stage.
+Early. Design and scaffold stage.
 
 ## License
 
