@@ -68,38 +68,46 @@ def load_model(name, device=None):
 
 
 @torch.no_grad()
-def predict_next_word(tok, model, device, context_text, max_tokens=6):
-    """Greedy-decode the next whitespace-delimited word after context_text.
-
-    Returns (predicted_word, top1_confidence). Uses KV caching so each extra
-    token is cheap. top1_confidence is the softmax prob of the first predicted
-    token -- the model's own confidence, for later confidence-gating. Works for
-    any byte-level/SentencePiece BPE tokenizer (new words decode with a leading
-    space).
-    """
-    ids = tok.encode(context_text, return_tensors="pt").to(device)
-    out = model(ids, use_cache=True)
-    past = out.past_key_values
-    logits = out.logits[0, -1].float()
-    first_conf = float(torch.softmax(logits, dim=-1).max())
-    nxt = int(logits.argmax())
-    pieces = [nxt]
-    last = torch.tensor([[nxt]], device=device)
+def _complete_word(tok, model, device, first_id, ctx_past, max_tokens):
+    """Greedily complete one word starting from first_id, reusing the context KV."""
+    pieces = [first_id]
+    last = torch.tensor([[first_id]], device=device)
+    past = ctx_past
     for _ in range(1, max_tokens):
         out = model(last, past_key_values=past, use_cache=True)
         past = out.past_key_values
-        nxt = int(out.logits[0, -1].argmax())
-        if tok.decode([nxt]).startswith((" ", "▁")):  # next word started
+        nid = int(out.logits[0, -1].argmax())
+        if tok.decode([nid]).startswith((" ", "▁")):  # next word started
             break
-        pieces.append(nxt)
-        last = torch.tensor([[nxt]], device=device)
-    return tok.decode(pieces).strip(), first_conf
+        pieces.append(nid)
+        last = torch.tensor([[nid]], device=device)
+    return tok.decode(pieces).strip()
+
+
+@torch.no_grad()
+def predict_topk_words(tok, model, device, context_text, k=5, max_tokens=6):
+    """Return (top-k candidate next words, top-1 confidence).
+
+    The context is forwarded once; the k most likely first tokens each branch
+    from that shared KV cache and are greedily completed to a word. This
+    approximates the top-k next *words* by top-k first-token beams -- a
+    documented approximation (a longer word's later tokens are decoded greedily).
+    """
+    ids = tok.encode(context_text, return_tensors="pt").to(device)
+    out = model(ids, use_cache=True)
+    ctx_past = out.past_key_values
+    logits = out.logits[0, -1].float()
+    top1_conf = float(torch.softmax(logits, dim=-1).max())
+    first_ids = torch.topk(logits, k).indices.tolist()
+    words = [_complete_word(tok, model, device, fid, ctx_past, max_tokens)
+             for fid in first_ids]
+    return words, top1_conf
 
 
 def measure(model_name, n_sentences, seed, max_preds=None):
     tok, model, device = load_model(model_name)
     sents = load_sentences(n_sentences, seed)
-    records = []  # (correct: bool, word_len: int, confidence: float)
+    records = []  # (top1, top3, top5, word_len, confidence)
     n_pred = 0
     for sent in sents:
         words = [w for w in sent if any(ch.isalnum() for ch in w)]
@@ -108,8 +116,12 @@ def measure(model_name, n_sentences, seed, max_preds=None):
             target = clean_word(words[i])
             if not target:
                 continue
-            pred_word, conf = predict_next_word(tok, model, device, context)
-            records.append((clean_word(pred_word) == target, len(target), conf))
+            cands, conf = predict_topk_words(tok, model, device, context, k=5)
+            cands = [clean_word(w) for w in cands]
+            t1 = int(cands[:1].count(target) > 0)
+            t3 = int(target in cands[:3])
+            t5 = int(target in cands[:5])
+            records.append((t1, t3, t5, len(target), conf))
             n_pred += 1
             if max_preds and n_pred >= max_preds:
                 return records, model_name
@@ -117,15 +129,18 @@ def measure(model_name, n_sentences, seed, max_preds=None):
 
 
 def savings_curves(records, c_values, alpha=ALPHA, v=V_MID, rho=RHO_MID):
-    correct = np.array([r[0] for r in records], dtype=bool)
-    M = np.array([r[1] for r in records], dtype=float)
+    rec = np.array(records, dtype=float)  # cols: t1,t3,t5,M,conf
+    correct = rec[:, 0].astype(bool)
+    M = rec[:, 3]
     totalM = float(M.sum())
     p = float(correct.mean())
 
     # raw KS: chars saved on correct predictions, no interaction cost.
     raw = float(M[correct].sum()) / totalM
 
-    out = {"p_top1": p, "n": len(records), "mean_word_len": float(M.mean()),
+    out = {"p_top1": p, "p_top3": float(rec[:, 1].mean()),
+           "p_top5": float(rec[:, 2].mean()),
+           "n": len(records), "mean_word_len": float(M.mean()),
            "raw_KS": raw, "gross": [], "net": []}
     for c in c_values:
         r = c * rho
@@ -160,10 +175,11 @@ def main():
     # Per-prediction records for downstream confidence-gating analysis.
     with open(os.path.join(RESULTS_DIR, f"records_{tag}.json"), "w") as f:
         json.dump({"model": name,
-                   "records": [[int(c), int(m), round(conf, 5)]
-                               for (c, m, conf) in records]}, f)
+                   "records": [[int(t1), int(t3), int(t5), int(m), round(conf, 5)]
+                               for (t1, t3, t5, m, conf) in records]}, f)
 
-    print(f"model={name}  n={res['n']}  measured top-1 p={res['p_top1']:.3f}"
+    print(f"model={name}  n={res['n']}  top-1 p={res['p_top1']:.3f}"
+          f"  top-3 p={res['p_top3']:.3f}  top-5 p={res['p_top5']:.3f}"
           f"  mean_word_len={res['mean_word_len']:.2f}")
     print(f"raw KS (reported-style) = {res['raw_KS']*100:.1f}%")
     for c in (1.0, 2.0, 4.0, 6.0):

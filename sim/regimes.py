@@ -12,6 +12,8 @@ robust to their exact values.
 """
 
 import os
+import json
+import argparse
 import numpy as np
 import matplotlib
 
@@ -68,40 +70,56 @@ def crossover(f_decl, f_flat, c_grid):
 
 
 def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--from-measured", default=None,
+                    help="tag of results/measured_<tag>.json to use p1, pk(top-5)")
+    ap.add_argument("--pe", type=float, default=PE)
+    args = ap.parse_args()
+
+    p1, pk, pe, src = P1, PK, args.pe, "placeholder"
+    if args.from_measured:
+        with open(os.path.join(RESULTS_DIR, f"measured_{args.from_measured}.json")) as f:
+            d = json.load(f)
+        p1, pk, src = d["p_top1"], d["p_top5"], d["model"]
+
     c = np.linspace(1.0, 10.0, 400)
-    a = frac_A(c) * 100
-    b = np.full_like(c, frac_B() * 100)
-    cc = frac_C(c) * 100
+    a = frac_A(c, p1) * 100
+    b = np.full_like(c, frac_B(pk) * 100)
+    cc = frac_C(c, pe) * 100
 
     fig, ax = plt.subplots(figsize=(7.8, 5.4))
-    ax.plot(c, a, "C0", lw=2.5, label=f"A: top-1 commit (p1={P1})")
-    ax.plot(c, b, "C2", lw=2.5, label=f"B: top-{K} suggestion (pk={PK}) -- flat in c")
-    ax.plot(c, cc, "C3", lw=2.5, label=f"C: abbrev expansion (pe={PE})")
+    ax.plot(c, a, "C0", lw=2.5, label=f"A: top-1 commit (p1={p1:.2f})")
+    ax.plot(c, b, "C2", lw=2.5, label=f"B: top-{K} suggestion (pk={pk:.2f}) -- flat in c")
+    ax.plot(c, cc, "C3", lw=2.5, label=f"C: abbrev expansion (pe={pe:.2f})")
     ax.axhline(0, color="0.4", lw=1)
     ax.axvspan(*ne.C_BAND, color="0.5", alpha=0.12, lw=0, label="realistic gaze c band")
 
-    xAB = crossover(frac_A, frac_B(), c)
-    xCB = crossover(frac_C, frac_B(), c)
-    for x, lab in [(xAB, "B>A"), (xCB, "B>C")]:
+    xAB = crossover(lambda cc_: frac_A(cc_, p1), frac_B(pk), c)
+    xCB = crossover(lambda cc_: frac_C(cc_, pe), frac_B(pk), c)
+    ytop = ax.get_ylim()[1]
+    span = ytop - ax.get_ylim()[0]
+    for j, (x, lab) in enumerate([(xAB, "B beats A"), (xCB, "B beats C")]):
         if x:
             ax.axvline(x, color="0.5", ls=":", lw=1)
-            ax.text(x, ax.get_ylim()[1], f" {lab} @ c={x:.1f}", fontsize=8,
-                    va="top", color="0.3")
+            ax.text(x + 0.1, ytop - (0.04 + 0.06 * j) * span, f"{lab} @ c={x:.1f}",
+                    fontsize=8, va="top", color="0.3")
 
     ax.set_xlabel("correction-cost ratio  c")
     ax.set_ylabel("net savings  (% of characters)")
-    ax.set_title("Correction cost hits commit and expansion, not suggestion lists")
+    ax.set_title("Correction cost hits commit and expansion, not suggestion lists\n"
+                 f"(p1, pk {'measured: ' + src if args.from_measured else 'placeholder'})")
     ax.legend(fontsize=8.5, loc="lower left")
     fig.tight_layout()
     os.makedirs(RESULTS_DIR, exist_ok=True)
     fig.savefig(os.path.join(RESULTS_DIR, "fig8_regimes.png"), dpi=150)
     plt.close(fig)
 
-    print(f"frac_B (c-independent) = {frac_B()*100:.1f}%")
+    print(f"source={src}  p1={p1:.3f} pk={pk:.3f} pe={pe:.3f}")
+    print(f"frac_B (c-independent) = {frac_B(pk)*100:.1f}%")
     print(f"crossover B>A at c={xAB}, B>C at c={xCB}  (gaze band {ne.C_BAND})")
     for cv in (1, 2, 4, 6):
-        print(f"  c={cv}:  A={frac_A(cv)*100:6.1f}%  B={frac_B()*100:6.1f}%  "
-              f"C={frac_C(cv)*100:6.1f}%")
+        print(f"  c={cv}:  A={frac_A(cv, p1)*100:6.1f}%  B={frac_B(pk)*100:6.1f}%  "
+              f"C={frac_C(cv, pe)*100:6.1f}%")
     print("wrote results/fig8_regimes.png")
 
 

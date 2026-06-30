@@ -32,8 +32,8 @@ RESULTS_DIR = os.path.join(os.path.dirname(__file__), "..", "results")
 def load_records(tag):
     with open(os.path.join(RESULTS_DIR, f"records_{tag}.json")) as f:
         d = json.load(f)
-    rec = np.array(d["records"], dtype=float)  # cols: correct, M, conf
-    return d["model"], rec[:, 0].astype(bool), rec[:, 1], rec[:, 2]
+    rec = np.array(d["records"], dtype=float)  # cols: t1, t3, t5, M, conf
+    return d["model"], rec[:, 0].astype(bool), rec[:, 3], rec[:, 4]
 
 
 def net_fraction(correct, M, conf, tau, c, alpha=ne.ALPHA, v=ne.V_MID, rho=ne.RHO_MID):

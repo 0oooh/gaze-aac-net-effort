@@ -25,19 +25,23 @@ cost of correcting wrong predictions.
 
 ## Measured accuracy
 
-| model | measured top-1 p | n predictions |
-|-------|------------------|---------------|
-| GPT-2 small (124M) | 0.23 | 800 |
-| GPT-2 medium (355M) | 0.27 | 700 |
-| Qwen2.5-1.5B (2024) | 0.32 | 600 |
+| model | top-1 | top-3 | top-5 | n |
+|-------|-------|-------|-------|---|
+| GPT-2 small (124M) | 0.23 | 0.35 | 0.41 | 500 |
+| GPT-2 medium (355M) | 0.28 | 0.42 | 0.47 | 400 |
+| Qwen2.5-1.5B (2024) | 0.35 | 0.48 | 0.55 | 400 |
 
-A modern 2024 model (Qwen2.5-1.5B) reaches only 0.32 -- still far left of the
-~0.7-0.85 bar. This supports an **entropy-ceiling** reading: top-1 exact
+A modern 2024 model (Qwen2.5-1.5B) reaches only top-1 = 0.35 -- still far left of
+the ~0.7-0.85 bar. This supports an **entropy-ceiling** reading: top-1 exact
 next-word prediction is inherently bounded well below the bar (human next-word
-top-1 is ~0.25-0.3), so always-on top-1 commit prediction cannot pay off in the
-high-correction-cost gaze regime *regardless of model strength*. That makes the
-finding structural, not an artifact of a weak model -- and motivates the regime
-analysis below (top-k / expansion change the structure, not just the accuracy).
+top-1 is ~0.25-0.3), so always-on top-1 *commit* prediction cannot pay off in the
+high-correction-cost gaze regime *regardless of model strength*. The finding is
+structural, not a weak-model artifact.
+
+Top-k uplifts accuracy by a measured ~+0.20 (top-1 -> top-5), which is exactly
+why the prediction *regime* (top-1 commit vs top-k suggestion vs expansion)
+matters more than raw model strength -- see below. These measured top-k numbers
+now ground the regime figure (no longer placeholders).
 
 ## Finding so far
 
@@ -96,9 +100,10 @@ model the realistic spectrum (`regimes.md`, fig8):
   but declines **steepest** (a wrong expansion deletes a whole phrase, scaled by
   `c`).
 
-The crossover: expansion wins at low `c` (~< 1.7 with placeholder rates), but in
-the realistic gaze band (c = 2-6) the **suggestion list dominates** both commit
-and expansion. So the honest claim is not "prediction is bad" -- it is that the
+The crossover (with **measured** Qwen rates p1=0.35, top-5=0.55): expansion wins
+only at low `c` (B beats C at c~1.9, B beats A at c~1.2), but across the entire
+realistic gaze band (c = 2-6) the **suggestion list dominates** both commit and
+expansion. So the honest claim is not "prediction is bad" -- it is that the
 optimal UI depends on correction cost, and the field's most aggressive
 paradigms (commit, expansion) are exactly the ones that collapse in the
 high-correction-cost gaze regime. The structural part (B is flat in `c` while A
