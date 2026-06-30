@@ -1,3 +1,6 @@
+# Korean-language docs are private; English (name.md) is the published version
+*.ko.md
+
 # Private strategy docs — never publish
 AAC_연구시작_문서.md
 AAC_6주_빌드플랜.md
