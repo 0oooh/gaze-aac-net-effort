@@ -13,6 +13,8 @@ Catalog of the maintained knowledge base. See `../CLAUDE.md` for the schema.
 
 ## Wiki pages
 - [`design.md`](design.md) — net-effort breakeven model; frozen v0.
+- [`regimes.md`](regimes.md) — top-1 commit vs top-k suggestion vs abbreviation
+  expansion; which are correction-cost-sensitive.
 - [`params.md`](params.md) — grounded ranges for the model parameters
   (`M, alpha, v, p, c, rho`); sweep axes are `p, c, a`.
 - `notes/` — (planned) per-paper notes; anchors: SpeakFaster, Trnka & McCoy
@@ -24,6 +26,7 @@ Catalog of the maintained knowledge base. See `../CLAUDE.md` for the schema.
   accuracy `p`; computes raw vs gross vs net savings.
 - [`../sim/figure_measured.py`](../sim/figure_measured.py) — fig4, fig5.
 - [`../sim/gating.py`](../sim/gating.py) — confidence-gating analysis; fig6, fig7.
+- [`../sim/regimes.py`](../sim/regimes.py) — three-regime net savings vs c; fig8.
 - [`results.md`](results.md) — measured findings so far (living).
 - `../results/` — fig1-3 (model), fig4 (savings vs c), fig5 (models on
   breakeven), measured_*.json, summary.txt.

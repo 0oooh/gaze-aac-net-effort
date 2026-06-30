@@ -47,44 +47,57 @@ def load_sentences(n, seed, min_words=6):
     return sents[:n]
 
 
-def load_model(name):
-    from transformers import GPT2LMHeadModel, GPT2TokenizerFast
-    tok = GPT2TokenizerFast.from_pretrained(name)
-    model = GPT2LMHeadModel.from_pretrained(name)
-    model.eval()
+def pick_device():
+    if torch.backends.mps.is_available():
+        return "mps"
+    if torch.cuda.is_available():
+        return "cuda"
+    return "cpu"
+
+
+def load_model(name, device=None):
+    """Load any HuggingFace causal LM (GPT-2, Qwen2.5, Llama, SmolLM, ...)."""
+    from transformers import AutoTokenizer, AutoModelForCausalLM
+    device = device or pick_device()
+    tok = AutoTokenizer.from_pretrained(name)
+    dtype = torch.float16 if device in ("mps", "cuda") else torch.float32
+    model = AutoModelForCausalLM.from_pretrained(name, torch_dtype=dtype)
+    model.to(device).eval()
     torch.manual_seed(0)
-    return tok, model
+    return tok, model, device
 
 
 @torch.no_grad()
-def predict_next_word(tok, model, context_text, max_tokens=6):
+def predict_next_word(tok, model, device, context_text, max_tokens=6):
     """Greedy-decode the next whitespace-delimited word after context_text.
 
     Returns (predicted_word, top1_confidence). Uses KV caching so each extra
     token is cheap. top1_confidence is the softmax prob of the first predicted
-    token -- the model's own confidence, for later confidence-gating.
+    token -- the model's own confidence, for later confidence-gating. Works for
+    any byte-level/SentencePiece BPE tokenizer (new words decode with a leading
+    space).
     """
-    ids = tok.encode(context_text, return_tensors="pt")
+    ids = tok.encode(context_text, return_tensors="pt").to(device)
     out = model(ids, use_cache=True)
     past = out.past_key_values
-    logits = out.logits[0, -1]
+    logits = out.logits[0, -1].float()
     first_conf = float(torch.softmax(logits, dim=-1).max())
     nxt = int(logits.argmax())
     pieces = [nxt]
-    last = torch.tensor([[nxt]])
+    last = torch.tensor([[nxt]], device=device)
     for _ in range(1, max_tokens):
         out = model(last, past_key_values=past, use_cache=True)
         past = out.past_key_values
         nxt = int(out.logits[0, -1].argmax())
-        if tok.decode([nxt]).startswith(" "):  # next word started
+        if tok.decode([nxt]).startswith((" ", "▁")):  # next word started
             break
         pieces.append(nxt)
-        last = torch.tensor([[nxt]])
+        last = torch.tensor([[nxt]], device=device)
     return tok.decode(pieces).strip(), first_conf
 
 
 def measure(model_name, n_sentences, seed, max_preds=None):
-    tok, model = load_model(model_name)
+    tok, model, device = load_model(model_name)
     sents = load_sentences(n_sentences, seed)
     records = []  # (correct: bool, word_len: int, confidence: float)
     n_pred = 0
@@ -95,7 +108,7 @@ def measure(model_name, n_sentences, seed, max_preds=None):
             target = clean_word(words[i])
             if not target:
                 continue
-            pred_word, conf = predict_next_word(tok, model, context)
+            pred_word, conf = predict_next_word(tok, model, device, context)
             records.append((clean_word(pred_word) == target, len(target), conf))
             n_pred += 1
             if max_preds and n_pred >= max_preds:

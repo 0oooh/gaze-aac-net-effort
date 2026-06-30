@@ -29,10 +29,15 @@ cost of correcting wrong predictions.
 |-------|------------------|---------------|
 | GPT-2 small (124M) | 0.23 | 800 |
 | GPT-2 medium (355M) | 0.27 | 700 |
+| Qwen2.5-1.5B (2024) | 0.32 | 600 |
 
-Bigger model -> higher `p` (0.23 -> 0.27), but both sit far left of the
-~0.7-0.85 bar. The trajectory motivates measuring a frontier conversational
-model (the SpeakFaster regime) as the rightmost point.
+A modern 2024 model (Qwen2.5-1.5B) reaches only 0.32 -- still far left of the
+~0.7-0.85 bar. This supports an **entropy-ceiling** reading: top-1 exact
+next-word prediction is inherently bounded well below the bar (human next-word
+top-1 is ~0.25-0.3), so always-on top-1 commit prediction cannot pay off in the
+high-correction-cost gaze regime *regardless of model strength*. That makes the
+finding structural, not an artifact of a weak model -- and motivates the regime
+analysis below (top-k / expansion change the structure, not just the accuracy).
 
 ## Finding so far
 
@@ -79,6 +84,32 @@ This pushes against the field's always-suggest default. It also sharpens the
 next questions: does a frontier conversational model clear the bar, and is the
 real gaze correction cost `c` actually in the 2-6 band.
 
+## Prediction regimes (this is not a strawman)
+
+The top-1-commit result could be dismissed as attacking a UI nobody uses. So we
+model the realistic spectrum (`regimes.md`, fig8):
+
+- **A top-1 commit** -- net savings declines with `c`.
+- **B top-k suggestion list** -- net savings is **flat in `c`** (a miss costs
+  only a scan, never a correction; `c` does not enter the formula).
+- **C abbreviation expansion (SpeakFaster's own paradigm)** -- best at low `c`,
+  but declines **steepest** (a wrong expansion deletes a whole phrase, scaled by
+  `c`).
+
+The crossover: expansion wins at low `c` (~< 1.7 with placeholder rates), but in
+the realistic gaze band (c = 2-6) the **suggestion list dominates** both commit
+and expansion. So the honest claim is not "prediction is bad" -- it is that the
+optimal UI depends on correction cost, and the field's most aggressive
+paradigms (commit, expansion) are exactly the ones that collapse in the
+high-correction-cost gaze regime. The structural part (B is flat in `c` while A
+and C decline) holds for any parameter values; only the crossover location
+depends on the hit rates (still to be measured) and the weak cost params.
+
+A small confirming detail: with Qwen2.5 (p=0.32), confidence-gating begins to
+eke out a *positive* net at c=2 (about +0.2% by offering only its top ~8%
+most-confident predictions) -- the gating policy "turns on" as accuracy rises,
+exactly as predicted.
+
 ## Honesty / limitations
 
 - GPT-2 small is a weak predictor; its low `p` is a lower bound. A frontier
@@ -102,3 +133,4 @@ real gaze correction cost `c` actually in the 2-6 band.
 - `../results/fig5_models_on_breakeven.png` -- models on the (p, c) breakeven.
 - `../results/fig6_gating_curve.png` -- net savings vs confidence gate `tau`.
 - `../results/fig7_calibration.png` -- accuracy vs model confidence.
+- `../results/fig8_regimes.png` -- net savings vs `c` for the three UI regimes.
